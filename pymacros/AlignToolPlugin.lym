@@ -617,8 +617,7 @@ class AlignToolPlugin(pya.Plugin):
 class AlignToolPluginFactory(pya.PluginFactory):
     def __init__(self):
         super().__init__()
-        iconPath = os.path.join(os.path.dirname(__file__), 'AlignToolIcon', '%s.png')
-        self.register(-1000, "Align Tool", "Align (A)", iconPath % "icon")
+        self.register(-1000, "Align Tool", "Align (A)", ':align_hcenter_32px')
   
     def create_plugin(self, manager, root, view):
         return AlignToolPlugin(view)
