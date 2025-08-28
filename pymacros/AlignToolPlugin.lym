@@ -75,6 +75,14 @@ class AlignToolSelection:
     layer: Optional[int]
     snap_point: Optional[pya.Point]
 
+    def __str__(self) -&gt; str:
+        return f"AlignToolSelection(location={self.location.to_s()}, "\
+               f"search_box={self.search_box.to_s()}, "\
+               f"edge={self.edge.to_s() if self.edge is not None else 'None'}, "\
+               f"shape={self.shape.to_s() if self.shape is not None else 'None'}, "\
+               f"layer={self.layer}"\
+               f")"
+
 
 class AlignToolSetupDock(pya.QDockWidget):
     def __init__(self):
