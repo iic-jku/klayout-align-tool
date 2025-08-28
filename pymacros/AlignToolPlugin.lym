@@ -362,13 +362,21 @@ class AlignToolPlugin(pya.Plugin):
                                      snap_point=None)
         
         def consider_edge_selection(selection: AlignToolSelection):
-            nonlocal nearest, search_box
-            intersection = e.clipped_line(search_box)
+            nonlocal nearest, search_box, location
+            intersection = selection.edge.clipped(search_box)
             if intersection is None:
                 return
-            if nearest.edge is None or \
-               selection.edge.distance_abs(location) &lt; nearest.edge.distance_abs(location):
+            elif nearest.edge is None:
                 nearest = selection
+            else:
+                old_intersection = nearest.edge.clipped(search_box)
+                dist_old = old_intersection.distance_abs(location)
+                dist_new = intersection.distance_abs(location)
+                if dist_new &lt; dist_old:
+                    nearest = selection
+                # else:
+                #    debug(f"dist_old({dist_old}) &gt;= dist_new({dist_new}), old edge {nearest.edge} not replaced by {selection.edge}, "
+                #          f"intersections old {old_intersection} vs new {intersection}")
         
         visible_layer_indexes = self.visible_layer_indexes()
         
