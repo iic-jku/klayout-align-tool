@@ -52,7 +52,9 @@ else:
 
 DEBUG = False
 
-
+# NOTE: always add an additional guard `if DEBUG: debug(f"...")` at each call site,
+#       otherwise the eager f-string eager evaluation can be costly,
+#       even when debugging is turned off, especially in hot spots 
 def debug(*args, **kwargs):
     if DEBUG:
         print(*args, **kwargs)
@@ -212,7 +214,8 @@ class AlignToolPlugin(pya.Plugin):
 
     @state.setter
     def state(self, state: AlignToolState):
-        debug(f"Transitioning from {self._state.value} to {state.value}")
+        if DEBUG:
+            debug(f"Transitioning from {self._state.value} to {state.value}")
         self._state = state
         if not(self.setupDock):
             pass
@@ -225,7 +228,8 @@ class AlignToolPlugin(pya.Plugin):
 
     @pre_selected_objects.setter
     def pre_selected_objects(self, objects: List[pya.Instance | pya.Shape]):
-        debug(f"Setting pre_selected_objects ({len(self.pre_selected_objects)}): {self.pre_selected_objects}")
+        if DEBUG:
+            debug(f"Setting pre_selected_objects ({len(self.pre_selected_objects)}): {self.pre_selected_objects}")
         
         self._pre_selected_objects = objects
         if not(self.setupDock):
@@ -239,7 +243,8 @@ class AlignToolPlugin(pya.Plugin):
 
     @selection1.setter
     def selection1(self, selection: AlignToolSelection):
-        debug(f"setting selection1 to {selection}")
+        if DEBUG:
+            debug(f"setting selection1 to {selection}")
         self._selection1 = selection
         if not(self.setupDock):
             pass
@@ -261,10 +266,11 @@ class AlignToolPlugin(pya.Plugin):
         
     def activated(self):
         view_is_visible = self.view.widget().isVisible()
-        debug(f"AlignToolPlugin.activated, "
-              f"for cell view {self.cell_view.cell_name}, "
-              f"is visible: {view_is_visible}")
-        debug(f"viewport trans: {self.view.viewport_trans()}")
+        if DEBUG:
+            debug(f"AlignToolPlugin.activated, "
+                  f"for cell view {self.cell_view.cell_name}, "
+                  f"is visible: {view_is_visible}")
+            debug(f"viewport trans: {self.view.viewport_trans()}")
         if not view_is_visible:
             return
 
@@ -279,7 +285,8 @@ class AlignToolPlugin(pya.Plugin):
         self.state = AlignToolState.PENDING_SELECTION1
             
     def deactivated(self):
-        debug("AlignToolPlugin.deactivated")
+        if DEBUG:
+            debug("AlignToolPlugin.deactivated")
         
         self.state = AlignToolState.INACTIVE
         self.pre_selected_objects = []
@@ -290,7 +297,8 @@ class AlignToolPlugin(pya.Plugin):
             self.setupDock.hide()
 
     def deactivate(self):
-        debug("AlignToolPlugin.deactive")
+        if DEBUG:
+            debug("AlignToolPlugin.deactive")
         esc_key  = 16777216 
         keyPress = pya.QKeyEvent(pya.QKeyEvent.KeyPress, esc_key, pya.Qt.NoModifier)
         pya.QApplication.sendEvent(self.view.widget(), keyPress)        
@@ -374,9 +382,11 @@ class AlignToolPlugin(pya.Plugin):
                 dist_new = intersection.distance_abs(location)
                 if dist_new &lt; dist_old:
                     nearest = selection
+                # # Hotspot, don't log this
                 # else:
-                #    debug(f"dist_old({dist_old}) &gt;= dist_new({dist_new}), old edge {nearest.edge} not replaced by {selection.edge}, "
-                #          f"intersections old {old_intersection} vs new {intersection}")
+                #    if DEBUG:                
+                #        debug(f"dist_old({dist_old}) &gt;= dist_new({dist_new}), old edge {nearest.edge} not replaced by {selection.edge}, "
+                #              f"intersections old {old_intersection} vs new {intersection}")
         
         visible_layer_indexes = self.visible_layer_indexes()
         
@@ -393,9 +403,11 @@ class AlignToolPlugin(pya.Plugin):
                 while not iter.at_end():
                     inst = iter.current_inst_element().inst()
                     hidden = self.view.is_cell_hidden(inst.cell.cell_index(), self.view.active_cellview_index)
-                    # print(f"inst from cell {inst.cell.name} hidden? {hidden}, "
-                    #      f"trans={iter.trans() * iter.inst_trans()}, "
-                    #      f"inst_bbox={inst.bbox()}")
+                    # # Hotspot, don't log this
+                    # if DEBUG:                
+                    #     debug(f"inst from cell {inst.cell.name} hidden? {hidden}, "
+                    #           f"trans={iter.trans() * iter.inst_trans()}, "
+                    #           f"inst_bbox={inst.bbox()}")
                     if not hidden:
                         inst_bbox_from_top = inst.bbox().transformed(iter.trans())
                         edges = pya.Edges(inst_bbox_from_top)
@@ -422,10 +434,14 @@ class AlignToolPlugin(pya.Plugin):
                     iter.max_depth = max(self.view.max_hier_levels-1, 0)
                     while not iter.at_end():
                         sh = iter.shape()
-                        # debug(f"lyr {lyr} ({li}), found {sh}")
+                        # # Hotspot, don't log this
+                        # if DEBUG:
+                        #     debug(f"lyr {lyr} ({li}), found {sh}")
                         pg = sh.polygon
                         if pg is None:
-                            # debug(f"Skip shape {sh}, it's has no polygon")
+                            # # Hotspot, don't log this
+                            # if DEBUG:
+                            #     debug(f"Skip shape {sh}, it's has no polygon")
                             pass
                         else:
                             p = sh.polygon.transformed(iter.itrans())
@@ -494,7 +510,9 @@ class AlignToolPlugin(pya.Plugin):
     
     def mouse_moved_event(self, dpoint: pya.DPoint, buttons: int, prio: bool):
         if prio:
-            # print(f"mouse moved event, p={dpoint}, prio={prio}")
+            # # Hotspot, don't log this       
+            # if DEBUG:
+            #     debug(f"mouse moved event, p={dpoint}, prio={prio}")
 
             selection = self.find_selection(location=dpoint, max_distance=self.max_distance)
             if selection is None:
