@@ -189,6 +189,8 @@ class AlignToolPlugin(pya.Plugin):
         self.setupDock      = None
         self.view            = view
 
+        self._defer_timer = None
+
         self._state = AlignToolState.INACTIVE
         self._pre_selected_objects = []
         self._selection1: Optional[AlignToolSelection] = None
@@ -264,6 +266,22 @@ class AlignToolPlugin(pya.Plugin):
                 l += [o.shape]
         return l
         
+    def show_editor_options(self):
+        mw = pya.Application.instance().main_window()
+    
+        def on_timeout():
+            mw.call_menu('cm_edit_options')
+            self._defer_timer._destroy()
+            self._defer_timer = None
+        
+        # NOTE: if we directly call the Editor Options menu action
+        #       the GUI immediately will switch back to the Librariew view
+        #       so we enqueue it into the event loop
+        self._defer_timer = pya.QTimer(mw)
+        self._defer_timer.setSingleShot(True)
+        self._defer_timer.timeout = on_timeout
+        self._defer_timer.start(0)
+               
     def activated(self):
         view_is_visible = self.view.widget().isVisible()
         if DEBUG:
@@ -279,6 +297,8 @@ class AlignToolPlugin(pya.Plugin):
             self.setupDock = AlignToolSetupDock()
             mw.addDockWidget(pya.Qt_DockWidgetArea.RightDockWidgetArea, self.setupDock)
         self.setupDock.show()
+
+        self.show_editor_options()
 
         self.pre_selected_objects = self.selected_objects()
         
