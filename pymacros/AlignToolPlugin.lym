@@ -374,7 +374,7 @@ class AlignToolPlugin(pya.Plugin):
                 idxs.append(lref.layer_index())
         return idxs
     
-    def find_selection(self, location: pya.DPoint, max_distance: int) -&gt; Optional[AlignToolSelection]:
+    def find_selection(self, location: pya.DPoint, max_distance: int, consider_rulers: bool) -&gt; Optional[AlignToolSelection]:
         location = location.to_itype(self.dbu)
                 
         search_box = pya.Box(location.x - max_distance, location.y - max_distance, 
@@ -478,6 +478,43 @@ class AlignToolPlugin(pya.Plugin):
                                 )
                         iter.next()
 
+            if consider_rulers:
+                for a in self.view.each_annotation():
+                    points: List[pya.Point] = []
+                    edges: List[pya.Edge] = []
+                    match a.outline:
+                        case pya.Annotation.OutlineBox:
+                            box = a.box().to_itype(self.dbu)
+                            edges = pya.Polygon(box).each_edge()
+                        case _:
+                            points = [dp.to_itype(self.dbu) for dp in a.points]
+                    for e in edges:
+                        clipped_edge = e.clipped(search_box)
+                        if clipped_edge:
+                            consider_edge_selection(
+                                AlignToolSelection(location=location,
+                                                   search_box=search_box,
+                                                   edge=e,
+                                                   path=[],
+                                                   shape=None,
+                                                   bbox_of_instance=None,
+                                                   layer=None,
+                                                   snap_point=None)  # NOTE: snap point will be set later
+                            )
+                    for p in points:
+                        if search_box.contains(p):
+                            e = pya.Edge(p, p)
+                            consider_edge_selection(
+                                AlignToolSelection(location=location,
+                                                   search_box=search_box,
+                                                   edge=e,
+                                                   path=[],
+                                                   shape=None,
+                                                   bbox_of_instance=None,
+                                                   layer=None,
+                                                   snap_point=p)
+                            )
+
         if nearest.edge is None:
             return None
         
@@ -533,8 +570,13 @@ class AlignToolPlugin(pya.Plugin):
             # # Hotspot, don't log this       
             # if DEBUG:
             #     debug(f"mouse moved event, p={dpoint}, prio={prio}")
-
-            selection = self.find_selection(location=dpoint, max_distance=self.max_distance)
+            
+            # only consider rulers to specify a destination
+            consider_rulers = self.state == AlignToolState.PENDING_SELECTION2
+            
+            selection = self.find_selection(location=dpoint, 
+                                            max_distance=self.max_distance,
+                                            consider_rulers=consider_rulers)
             if selection is None:
                 match self.state:
                     case AlignToolState.INACTIVE:
@@ -563,7 +605,12 @@ class AlignToolPlugin(pya.Plugin):
     def mouse_click_event(self, dpoint: pya.DPoint, buttons: int, prio: bool):
         if prio:
             if buttons in [8]:  # Left click
-                selection = self.find_selection(location=dpoint, max_distance=self.max_distance)
+                # only consider rulers to specify a destination
+                consider_rulers = self.state == AlignToolState.PENDING_SELECTION2
+                
+                selection = self.find_selection(location=dpoint, 
+                                                max_distance=self.max_distance,
+                                                consider_rulers=consider_rulers)
                 if selection is None:
                     return False
                     
