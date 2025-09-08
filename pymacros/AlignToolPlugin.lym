@@ -632,8 +632,10 @@ class AlignToolPlugin(pya.Plugin):
                         self.commit_align(selection1, selection2)
                 
             if buttons in [16, 32]:
-                self._clear_markers()
-                
+                self._clear_all_markers()
+                self.state = AlignToolState.PENDING_SELECTION1
+                self.selection1 = None
+
             return True
         return False
         
