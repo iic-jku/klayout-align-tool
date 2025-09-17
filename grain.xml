@@ -3,7 +3,7 @@
  <name>AlignToolPlugin</name>
  <token/>
  <hidden>false</hidden>
- <version>0.14</version>
+ <version>0.15</version>
  <api-version/>
  <title>Align Tool Plugin</title>
  <doc>Tool to align layout objects</doc>
@@ -12,6 +12,11 @@
  <license>GPLv3</license>
  <author>Martin Jan Köhler</author>
  <author-contact/>
+ <depends>
+  <name>KLayoutPluginUtils</name>
+  <url/>
+  <version>0.2</version>
+ </depends>
  <authored-time/>
  <installed-time>2023-08-29T11:47:32</installed-time>
  <icon>iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAtNJREFUWIXdVrtu1EAUPYM8+wubD+AHqELHB2SdKBJSRJAoXZAN29Jl0yJRrJQU64Y0AaVASGsCDSVCioREg2hoAWUlmuzm5bFXh8IPxuNH7BCCxJFGY4/H95x7PHPHgAGSwhy7SpjxrYI5iyRHQggaL/abkgkhMu/E5AsAXlcp7JNcMpXGAuh5Huv0pmCSgmTHHL9RJMJ13WVETmREeJ6HTqcDklEfnKJz+yb49S06c9/Bd4/R8XfheZ6ZlACw4Lru3dLM9UwtywqGw+GO7kTiQAbHh+S3A/LzHvn+Cbn/kNxdyDgQZ740HA53LMsKTAcsLXiKMAytbre7CgCO44DkKHEgxSwA/Em+qeN0Xix+0XXd5W63uxqGYSFfmp3ZpJRKcyLrwMlP8sdH8stL8sNT8s0j8sUi+exO6kCSuZRSFcUn2S9cAwmCIJC9Xm9lPB7PA5hLHSABNQH8ad6B307Njcfj+V6vtxIEgSzjqBQgpQwGg8Feu90+AHBo23b0IGf9NBLEaOfG8w7b7fbBYDDYk1IGZRxpHSC5mVwLITaklMHW1tZzx3FeARgBuJU6UPTt4+w1BwBg5DgOAGB9ff2eUqql86QC9IIR74JQJxdCkCRs2waLbPcn0aKMYds2SCJ+LxWxtrZ23+QrqoTY3t7e1ckzmZUJ0KDvFk3ErIgrh+uuhEUOfDIz14Jsxj3q9DpiJ/ar00ez05Bkv9Vq5bJtEj+3DYsyv0qY8SvrwHXgnwvIfe/L/Hg0Jr2oDgghNv4WeWElLJlYFSYqPucTwD/SCtJRyXh0Lx68y0W63Brwp/EBFDffaMp8li3VfyZAHedJc4TGs5kqDddMgDrRjt/4CNazLBoPzytD1hcQnDawPCE/uzBsPQHhWTPL1TQSXAMXCwjPm1nuT6JPVRPVAmaqmeVqGi3SBigXkP5217Q8uW+I0kIkrFbjYJdBoQCzXP7X+AUrGBjmft5MHAAAAABJRU5ErkJggg==</icon>

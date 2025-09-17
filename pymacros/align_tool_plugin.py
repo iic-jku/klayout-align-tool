@@ -1,21 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<klayout-macro>
- <description/>
- <version/>
- <category>pymacros</category>
- <prolog/>
- <epilog/>
- <doc/>
- <autorun>true</autorun>
- <autorun-early>false</autorun-early>
- <priority>0</priority>
- <shortcut/>
- <show-in-menu>false</show-in-menu>
- <group-name/>
- <menu-path/>
- <interpreter>python</interpreter>
- <dsl-interpreter-name/>
- <text># --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # SPDX-FileCopyrightText: 2025 Martin Jan Köhler
 #
 # This program is free software: you can redistribute it and/or modify
@@ -29,35 +12,21 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program. If not, see &lt;http://www.gnu.org/licenses/&gt;.
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #--------------------------------------------------------------------------------
 
 
 from dataclasses import dataclass
-from typing import *
 import os 
 import sys
+from typing import *
 
 import pya
 
-if sys.version_info &gt;= (3, 11):
-    from enum import StrEnum
-else:
-    from enum import Enum
-    class StrEnum(str, Enum):
-        def __str__(self) -&gt; str:
-            return str(self.value)
-
-
-DEBUG = False
-
-# NOTE: always add an additional guard `if DEBUG: debug(f"...")` at each call site,
-#       otherwise the eager f-string eager evaluation can be costly,
-#       even when debugging is turned off, especially in hot spots 
-def debug(*args, **kwargs):
-    if DEBUG:
-        print(*args, **kwargs)
+from klayout_plugin_utils.debugging import debug, Debugging
+from klayout_plugin_utils.event_loop import EventLoop
+from klayout_plugin_utils.str_enum_compat import StrEnum
 
 
 class AlignToolState(StrEnum):
@@ -77,7 +46,7 @@ class AlignToolSelection:
     layer: Optional[int]
     snap_point: Optional[pya.Point]
 
-    def __str__(self) -&gt; str:
+    def __str__(self) -> str:
         return f"AlignToolSelection(location={self.location.to_s()}, "\
                f"search_box={self.search_box.to_s()}, "\
                f"edge={self.edge.to_s() if self.edge is not None else 'None'}, "\
@@ -107,12 +76,12 @@ class AlignToolSetupWidget(pya.QWidget):
     def __init__(self):
         super().__init__()
         self.pre_selection_label = pya.QLabel('')
-        self.selection1_value_label = pya.QLabel('&lt;span style="text-decoration: underline;"&gt;Source ref:&lt;/span&gt; None yet')
+        self.selection1_value_label = pya.QLabel('<span style="text-decoration: underline;">Source ref:</span> None yet')
         self.selection1_status_label = pya.QLabel('')
-        self.selection2_value_label = pya.QLabel('&lt;span style="text-decoration: underline;"&gt;Target ref:&lt;/span&gt; None yet')
+        self.selection2_value_label = pya.QLabel('<span style="text-decoration: underline;">Target ref:</span> None yet')
         self.selection2_status_label = pya.QLabel('')
         self.spacerItem = pya.QSpacerItem(0, 20, pya.QSizePolicy.Minimum, pya.QSizePolicy.Fixed)
-        self.cancelInfoLabel = pya.QLabel('&lt;span style="color: grey;"&gt;&lt;span style="text-decoration: underline;"&gt;Hint:&lt;/span&gt; Esc to cancel&lt;/span&gt;')
+        self.cancelInfoLabel = pya.QLabel('<span style="color: grey;"><span style="text-decoration: underline;">Hint:</span> Esc to cancel</span>')
         
         self.layout = pya.QGridLayout()
         self.layout.setSpacing(10)
@@ -138,22 +107,22 @@ class AlignToolSetupWidget(pya.QWidget):
                 self.selection2_status_label.setText("")
             case AlignToolState.PENDING_SELECTION1:
                 self.selection1_status_label.setText(
-                    '&lt;span style="color:blue; font-weight:bold;"&gt;⬅&lt;/span&gt; '
-                    '&lt;span style="font-weight:bold; color:blue;"&gt;Next&lt;/span&gt;'
+                    '<span style="color:blue; font-weight:bold;">⬅</span> '
+                    '<span style="font-weight:bold; color:blue;">Next</span>'
                 )
                 self.selection2_status_label.setText("")
             case AlignToolState.PENDING_SELECTION2:
                 self.selection1_status_label.setText("✅")
                 self.selection2_status_label.setText(
-                    '&lt;span style="color:blue; font-weight:bold;"&gt;⬅&lt;/span&gt; '
-                    '&lt;span style="font-weight:bold; color:blue;"&gt;Next&lt;/span&gt;'
+                    '<span style="color:blue; font-weight:bold;">⬅</span> '
+                    '<span style="font-weight:bold; color:blue;">Next</span>'
                 )
 
     def updatePreSelection(self, pre_selection: List[pya.Instance | pya.Shape]):
         if len(pre_selection) == 0:
-            msg = '&lt;span style="text-decoration: underline;"&gt;Pre-selection:&lt;/span&gt; None'
+            msg = '<span style="text-decoration: underline;">Pre-selection:</span> None'
         else:
-            def format_len(l: List, singular: str) -&gt; Optional[str]:
+            def format_len(l: List, singular: str) -> Optional[str]:
                 n = len(l)
                 match n:
                     case 0: return None
@@ -166,11 +135,11 @@ class AlignToolSetupWidget(pya.QWidget):
                 format_len(instances, "instance"),
                 format_len(shapes, "shape")
             ]
-            msg = '&lt;span style="text-decoration: underline;"&gt;Pre-selection:&lt;/span&gt; ' + \
+            msg = '<span style="text-decoration: underline;">Pre-selection:</span> ' + \
                   ', '.join([e for e in entries if e is not None])
         self.pre_selection_label.setText(msg)
 
-    def format_selection(self, selection: Optional[AlignToolSelection]) -&gt; str:
+    def format_selection(self, selection: Optional[AlignToolSelection]) -> str:
         if selection is None:
             return "None yet"
         if selection.snap_point is not None:
@@ -178,7 +147,7 @@ class AlignToolSetupWidget(pya.QWidget):
         return "1 edge"
 
     def updateSelection1(self, selection: Optional[AlignToolSelection]):
-        txt = '&lt;span style="text-decoration: underline;"&gt;Source ref:&lt;/span&gt; ' + \
+        txt = '<span style="text-decoration: underline;">Source ref:</span> ' + \
               self.format_selection(selection)
         self.selection1_value_label.setText(txt)
 
@@ -189,8 +158,6 @@ class AlignToolPlugin(pya.Plugin):
         self.setupDock      = None
         self.view            = view
 
-        self._defer_timer = None
-
         self._state = AlignToolState.INACTIVE
         self._pre_selected_objects = []
         self._selection1: Optional[AlignToolSelection] = None
@@ -199,24 +166,24 @@ class AlignToolPlugin(pya.Plugin):
         self.toolTip = pya.QToolTip()       
 
     @property
-    def cell_view(self) -&gt; pya.CellView:
+    def cell_view(self) -> pya.CellView:
         return self.view.active_cellview()
 
     @property
-    def layout(self) -&gt; pya.Layout:
+    def layout(self) -> pya.Layout:
         return self.cell_view.layout()
         
     @property
-    def dbu(self) -&gt; float:
+    def dbu(self) -> float:
         return self.layout.dbu
 
     @property
-    def state(self) -&gt; AlignToolState:
+    def state(self) -> AlignToolState:
         return self._state
 
     @state.setter
     def state(self, state: AlignToolState):
-        if DEBUG:
+        if Debugging.DEBUG:
             debug(f"Transitioning from {self._state.value} to {state.value}")
         self._state = state
         if not(self.setupDock):
@@ -225,12 +192,12 @@ class AlignToolPlugin(pya.Plugin):
             self.setupDock.updateState(state)
 
     @property
-    def pre_selected_objects(self) -&gt; List[pya.Instance | pya.Shape]:
+    def pre_selected_objects(self) -> List[pya.Instance | pya.Shape]:
         return self._pre_selected_objects
 
     @pre_selected_objects.setter
     def pre_selected_objects(self, objects: List[pya.Instance | pya.Shape]):
-        if DEBUG:
+        if Debugging.DEBUG:
             debug(f"Setting pre_selected_objects ({len(self.pre_selected_objects)}): {self.pre_selected_objects}")
         
         self._pre_selected_objects = objects
@@ -240,12 +207,12 @@ class AlignToolPlugin(pya.Plugin):
             self.setupDock.updatePreSelection(objects)
 
     @property
-    def selection1(self) -&gt; AlignToolSelection:
+    def selection1(self) -> AlignToolSelection:
         return self._selection1
 
     @selection1.setter
     def selection1(self, selection: AlignToolSelection):
-        if DEBUG:
+        if Debugging.DEBUG:
             debug(f"setting selection1 to {selection}")
         self._selection1 = selection
         if not(self.setupDock):
@@ -254,10 +221,10 @@ class AlignToolPlugin(pya.Plugin):
             self.setupDock.updateSelection1(selection)
 
     @property
-    def search_box_marker_visible(self) -&gt; bool:
+    def search_box_marker_visible(self) -> bool:
         return True  # DEBUG
 
-    def selected_objects(self) -&gt; List:
+    def selected_objects(self) -> List:
         l = []
         for o in self.view.each_object_selected():
             if o.is_cell_inst():
@@ -269,22 +236,14 @@ class AlignToolPlugin(pya.Plugin):
     def show_editor_options(self):
         mw = pya.Application.instance().main_window()
     
-        def on_timeout():
-            mw.call_menu('cm_edit_options')
-            self._defer_timer._destroy()
-            self._defer_timer = None
-        
         # NOTE: if we directly call the Editor Options menu action
         #       the GUI immediately will switch back to the Librariew view
         #       so we enqueue it into the event loop
-        self._defer_timer = pya.QTimer(mw)
-        self._defer_timer.setSingleShot(True)
-        self._defer_timer.timeout = on_timeout
-        self._defer_timer.start(0)
+        EventLoop.defer(lambda w=mw: w.call_menu('cm_edit_options'))
                
     def activated(self):
         view_is_visible = self.view.widget().isVisible()
-        if DEBUG:
+        if Debugging.DEBUG:
             debug(f"AlignToolPlugin.activated, "
                   f"for cell view {self.cell_view.cell_name}, "
                   f"is visible: {view_is_visible}")
@@ -305,7 +264,7 @@ class AlignToolPlugin(pya.Plugin):
         self.state = AlignToolState.PENDING_SELECTION1
             
     def deactivated(self):
-        if DEBUG:
+        if Debugging.DEBUG:
             debug("AlignToolPlugin.deactivated")
         
         self.state = AlignToolState.INACTIVE
@@ -317,7 +276,7 @@ class AlignToolPlugin(pya.Plugin):
             self.setupDock.hide()
 
     def deactivate(self):
-        if DEBUG:
+        if Debugging.DEBUG:
             debug("AlignToolPlugin.deactive")
         esc_key  = 16777216 
         keyPress = pya.QKeyEvent(pya.QKeyEvent.KeyPress, esc_key, pya.Qt.NoModifier)
@@ -337,13 +296,13 @@ class AlignToolPlugin(pya.Plugin):
             marker._destroy()
         self.markers_selection2 = []
     
-    def find_nearest_edge_point(self, location: pya.Point, edge: pya.Edge) -&gt; pya.Point:
+    def find_nearest_edge_point(self, location: pya.Point, edge: pya.Edge) -> pya.Point:
         """
         On the chosen edge, we want to find nearest end point or the center point
         """
 
-        def halfway(a: int, b:int) -&gt; int:
-            if a &lt; b:
+        def halfway(a: int, b:int) -> int:
+            if a < b:
                 return a + (b - a) / 2
             else:
                 return b + (a - b) / 2
@@ -356,13 +315,13 @@ class AlignToolPlugin(pya.Plugin):
         distances = [abs(p.distance(location)) for p in points]
         
         for point, distance in zip(points, distances):
-            if distance &lt; nearest_distance:
+            if distance < nearest_distance:
                 nearest_distance = distance
                 nearest_point = point  
         
         return nearest_point
     
-    def visible_layer_indexes(self) -&gt; List[int]:
+    def visible_layer_indexes(self) -> List[int]:
         idxs = []
         for lref in self.view.each_layer():
             if lref.visible and lref.valid:
@@ -374,7 +333,7 @@ class AlignToolPlugin(pya.Plugin):
                 idxs.append(lref.layer_index())
         return idxs
     
-    def find_selection(self, location: pya.DPoint, max_distance: int, consider_rulers: bool) -&gt; Optional[AlignToolSelection]:
+    def find_selection(self, location: pya.DPoint, max_distance: int, consider_rulers: bool) -> Optional[AlignToolSelection]:
         location = location.to_itype(self.dbu)
                 
         search_box = pya.Box(location.x - max_distance, location.y - max_distance, 
@@ -400,12 +359,12 @@ class AlignToolPlugin(pya.Plugin):
                 old_intersection = nearest.edge.clipped(search_box)
                 dist_old = old_intersection.distance_abs(location)
                 dist_new = intersection.distance_abs(location)
-                if dist_new &lt; dist_old:
+                if dist_new < dist_old:
                     nearest = selection
                 # # Hotspot, don't log this
                 # else:
-                #    if DEBUG:                
-                #        debug(f"dist_old({dist_old}) &gt;= dist_new({dist_new}), old edge {nearest.edge} not replaced by {selection.edge}, "
+                #    if Debugging.DEBUG:                
+                #        debug(f"dist_old({dist_old}) >= dist_new({dist_new}), old edge {nearest.edge} not replaced by {selection.edge}, "
                 #              f"intersections old {old_intersection} vs new {intersection}")
         
         visible_layer_indexes = self.visible_layer_indexes()
@@ -416,7 +375,7 @@ class AlignToolPlugin(pya.Plugin):
             
             # we prioritize the child instances of top cell
             # for those we also consider the bounding box
-            if self.view.max_hier_levels &gt;= 1:
+            if self.view.max_hier_levels >= 1:
                 iter = top_cell.begin_instances_rec_overlapping(search_box)
                 iter.min_depth = max(self.view.min_hier_levels-1, 0)
                 iter.max_depth = max(self.view.max_hier_levels-1, 0)
@@ -424,7 +383,7 @@ class AlignToolPlugin(pya.Plugin):
                     inst = iter.current_inst_element().inst()
                     hidden = self.view.is_cell_hidden(inst.cell.cell_index(), self.view.active_cellview_index)
                     # # Hotspot, don't log this
-                    # if DEBUG:                
+                    # if Debugging.DEBUG:                
                     #     debug(f"inst from cell {inst.cell.name} hidden? {hidden}, "
                     #           f"trans={iter.trans() * iter.inst_trans()}, "
                     #           f"inst_bbox={inst.bbox()}")
@@ -447,7 +406,7 @@ class AlignToolPlugin(pya.Plugin):
             
             # for lyr, li in enumerate(self.layout.layer_infos()):
             ## NOTE: GUI levels 0 .. 0 means that only the TOP cell(s) are viewed from outside!
-            if self.view.max_hier_levels &gt;= 1:
+            if self.view.max_hier_levels >= 1:
                 for lyr in visible_layer_indexes:
                     iter = top_cell.begin_shapes_rec_overlapping(lyr, search_box)
                     iter.min_depth = max(self.view.min_hier_levels-1, 0)
@@ -455,12 +414,12 @@ class AlignToolPlugin(pya.Plugin):
                     while not iter.at_end():
                         sh = iter.shape()
                         # # Hotspot, don't log this
-                        # if DEBUG:
+                        # if Debugging.DEBUG:
                         #     debug(f"lyr {lyr} ({li}), found {sh}")
                         pg = sh.polygon
                         if pg is None:
                             # # Hotspot, don't log this
-                            # if DEBUG:
+                            # if Debugging.DEBUG:
                             #     debug(f"Skip shape {sh}, it's has no polygon")
                             pass
                         else:
@@ -523,15 +482,15 @@ class AlignToolPlugin(pya.Plugin):
             nearest.snap_point = nearest_point
         return nearest
     
-    def viewport_adjust(self, v: int) -&gt; int:
+    def viewport_adjust(self, v: int) -> int:
         trans = pya.CplxTrans(self.view.viewport_trans(), self.dbu)
         return v / trans.mag
 
     @property
-    def max_distance(self) -&gt; int:
+    def max_distance(self) -> int:
         return self.viewport_adjust(20)
     
-    def preview_markers_for_selection(self, selection: AlignToolSelection) -&gt; List[pya.Marker]:
+    def preview_markers_for_selection(self, selection: AlignToolSelection) -> List[pya.Marker]:
         markers = []
     
         edge_marker = pya.Marker(self.view)
@@ -568,7 +527,7 @@ class AlignToolPlugin(pya.Plugin):
     def mouse_moved_event(self, dpoint: pya.DPoint, buttons: int, prio: bool):
         if prio:
             # # Hotspot, don't log this       
-            # if DEBUG:
+            # if Debugging.DEBUG:
             #     debug(f"mouse moved event, p={dpoint}, prio={prio}")
             
             # only consider rulers to specify a destination
@@ -641,10 +600,10 @@ class AlignToolPlugin(pya.Plugin):
         
     def commit_align(self, selection1: AlignToolSelection, selection2: AlignToolSelection):
         # NOTE:
-        #      Point1 -&gt; Point2: X/Z movement
-        #      Point1 -&gt; Edge2: TODO???
-        #      Edge1 -&gt; Point2: TODO???
-        #      Edge1 -&gt; Edge2: move only in direction normal to the edge
+        #      Point1 -> Point2: X/Z movement
+        #      Point1 -> Edge2: TODO???
+        #      Edge1 -> Point2: TODO???
+        #      Edge1 -> Edge2: move only in direction normal to the edge
         
         is_point1 = selection1.snap_point is not None
         is_edge1 = not is_point1
@@ -655,7 +614,7 @@ class AlignToolPlugin(pya.Plugin):
         dy = 0
         transformees = []
 
-        if len(self.pre_selected_objects) &gt;= 1:  # user had a preselection of one or multiple objects
+        if len(self.pre_selected_objects) >= 1:  # user had a preselection of one or multiple objects
             transformees = self.pre_selected_objects
         elif len(selection1.path) == 0:  # a shape within the same cell has to be aligned
             inst1 = selection1.bbox_of_instance
@@ -663,7 +622,7 @@ class AlignToolPlugin(pya.Plugin):
                 transformees = [selection1.shape]
             else:  # bounding box of an instance
                 transformees = [inst1]
-        elif len(selection1.path) &gt;= 1:  # an instance has to be aligned
+        elif len(selection1.path) >= 1:  # an instance has to be aligned
             transformees = [selection1.path[0].inst()]
 
         if is_point1 and is_point2:
@@ -725,6 +684,3 @@ class AlignToolPluginFactory(pya.PluginFactory):
     def create_plugin(self, manager, root, view):
         return AlignToolPlugin(view)
 
-AlignToolPluginFactory.instance = AlignToolPluginFactory()
-</text>
-</klayout-macro>
