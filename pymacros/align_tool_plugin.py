@@ -402,6 +402,18 @@ class AlignToolPlugin(pya.Plugin):
                                                        layer=None,
                                                        snap_point=None)  # NOTE: snap point will be set later
                                 )
+                        midpoint = inst_bbox_from_top.center()
+                        midpoint_dummy_edge = pya.Edge(midpoint, midpoint)
+                        consider_edge_selection(
+                            AlignToolSelection(location=location,
+                                               search_box=search_box,
+                                               edge=midpoint_dummy_edge,
+                                               path=iter.path(),
+                                               shape=inst_bbox_from_top,
+                                               bbox_of_instance=inst,
+                                               layer=None,
+                                               snap_point=midpoint)
+                        )
                     iter.next()
             
             # for lyr, li in enumerate(self.layout.layer_infos()):
@@ -435,6 +447,19 @@ class AlignToolPlugin(pya.Plugin):
                                                        layer=lyr,
                                                        snap_point=None)  # NOTE: snap point will be set later
                                 )
+                            midpoint = p.bbox().center()
+                            midpoint_dummy_edge = pya.Edge(midpoint, midpoint)
+                            consider_edge_selection(
+                                AlignToolSelection(location=location,
+                                                   search_box=search_box,
+                                                   edge=midpoint_dummy_edge,
+                                                   path=iter.path(),
+                                                   shape=sh,
+                                                   bbox_of_instance=None,
+                                                   layer=None,
+                                                   snap_point=midpoint)
+                            )
+                        
                         iter.next()
 
             if consider_rulers:
