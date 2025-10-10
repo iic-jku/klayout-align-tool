@@ -369,135 +369,139 @@ class AlignToolPlugin(pya.Plugin):
         
         visible_layer_indexes = self.visible_layer_indexes()
         
-        for top_cell in self.layout.top_cells():
-            if self.cell_view.is_cell_hidden(top_cell):
-                continue
-            
-            # we prioritize the child instances of top cell
-            # for those we also consider the bounding box
-            if self.view.max_hier_levels >= 1:
-                iter = top_cell.begin_instances_rec_overlapping(search_box)
+        # NOTE: self.layout.top_cells() are the top cells from the layout perspective,
+        #       but self.cell_view.cell is the current top cell,  
+        #       which is user-configurable via 'Show As New Top'
+        
+        top_cell = self.cell_view.cell
+        if self.cell_view.is_cell_hidden(top_cell):
+            return None
+        
+        # we prioritize the child instances of top cell
+        # for those we also consider the bounding box
+        if self.view.max_hier_levels >= 1:
+            iter = top_cell.begin_instances_rec_overlapping(search_box)
+            iter.min_depth = max(self.view.min_hier_levels-1, 0)
+            iter.max_depth = max(self.view.max_hier_levels-1, 0)
+            while not iter.at_end():
+                inst = iter.current_inst_element().inst()
+                hidden = self.view.is_cell_hidden(inst.cell.cell_index(), self.view.active_cellview_index)
+                # # Hotspot, don't log this
+                # if Debugging.DEBUG:                
+                #     debug(f"inst from cell {inst.cell.name} hidden? {hidden}, "
+                #           f"trans={iter.trans() * iter.inst_trans()}, "
+                #           f"inst_bbox={inst.bbox()}")
+                if not hidden:
+                    inst_bbox_from_top = inst.bbox().transformed(iter.trans())
+                    edges = pya.Edges(inst_bbox_from_top)
+                    for e in edges:
+                        if e.clipped(search_box) is not None:
+                            consider_edge_selection(
+                                AlignToolSelection(location=location,
+                                                   search_box=search_box,
+                                                   edge=e,
+                                                   path=iter.path(),
+                                                   shape=inst_bbox_from_top,
+                                                   bbox_of_instance=inst,
+                                                   layer=None,
+                                                   snap_point=None)  # NOTE: snap point will be set later
+                            )
+                    midpoint = inst_bbox_from_top.center()
+                    midpoint_dummy_edge = pya.Edge(midpoint, midpoint)
+                    consider_edge_selection(
+                        AlignToolSelection(location=location,
+                                           search_box=search_box,
+                                           edge=midpoint_dummy_edge,
+                                           path=iter.path(),
+                                           shape=inst_bbox_from_top,
+                                           bbox_of_instance=inst,
+                                           layer=None,
+                                           snap_point=midpoint)
+                    )
+                iter.next()
+        
+        # for lyr, li in enumerate(self.layout.layer_infos()):
+        ## NOTE: GUI levels 0 .. 0 means that only the TOP cell(s) are viewed from outside!
+        if self.view.max_hier_levels >= 1:
+            for lyr in visible_layer_indexes:
+                iter = top_cell.begin_shapes_rec_overlapping(lyr, search_box)
                 iter.min_depth = max(self.view.min_hier_levels-1, 0)
                 iter.max_depth = max(self.view.max_hier_levels-1, 0)
                 while not iter.at_end():
-                    inst = iter.current_inst_element().inst()
-                    hidden = self.view.is_cell_hidden(inst.cell.cell_index(), self.view.active_cellview_index)
+                    sh = iter.shape()
                     # # Hotspot, don't log this
-                    # if Debugging.DEBUG:                
-                    #     debug(f"inst from cell {inst.cell.name} hidden? {hidden}, "
-                    #           f"trans={iter.trans() * iter.inst_trans()}, "
-                    #           f"inst_bbox={inst.bbox()}")
-                    if not hidden:
-                        inst_bbox_from_top = inst.bbox().transformed(iter.trans())
-                        edges = pya.Edges(inst_bbox_from_top)
-                        for e in edges:
-                            if e.clipped(search_box) is not None:
-                                consider_edge_selection(
-                                    AlignToolSelection(location=location,
-                                                       search_box=search_box,
-                                                       edge=e,
-                                                       path=iter.path(),
-                                                       shape=inst_bbox_from_top,
-                                                       bbox_of_instance=inst,
-                                                       layer=None,
-                                                       snap_point=None)  # NOTE: snap point will be set later
-                                )
-                        midpoint = inst_bbox_from_top.center()
+                    # if Debugging.DEBUG:
+                    #     debug(f"lyr {lyr} ({li}), found {sh}")
+                    pg = sh.polygon
+                    if pg is None:
+                        # # Hotspot, don't log this
+                        # if Debugging.DEBUG:
+                        #     debug(f"Skip shape {sh}, it's has no polygon")
+                        pass
+                    else:
+                        p = sh.polygon.transformed(iter.itrans())
+                        for e in p.each_edge():
+                            consider_edge_selection(
+                                AlignToolSelection(location=location,
+                                                   search_box=search_box,
+                                                   edge=e,
+                                                   path=iter.path(),
+                                                   shape=sh,
+                                                   bbox_of_instance=None,
+                                                   layer=lyr,
+                                                   snap_point=None)  # NOTE: snap point will be set later
+                            )
+                        midpoint = p.bbox().center()
                         midpoint_dummy_edge = pya.Edge(midpoint, midpoint)
                         consider_edge_selection(
                             AlignToolSelection(location=location,
                                                search_box=search_box,
                                                edge=midpoint_dummy_edge,
                                                path=iter.path(),
-                                               shape=inst_bbox_from_top,
-                                               bbox_of_instance=inst,
+                                               shape=sh,
+                                               bbox_of_instance=None,
                                                layer=None,
                                                snap_point=midpoint)
                         )
+                    
                     iter.next()
-            
-            # for lyr, li in enumerate(self.layout.layer_infos()):
-            ## NOTE: GUI levels 0 .. 0 means that only the TOP cell(s) are viewed from outside!
-            if self.view.max_hier_levels >= 1:
-                for lyr in visible_layer_indexes:
-                    iter = top_cell.begin_shapes_rec_overlapping(lyr, search_box)
-                    iter.min_depth = max(self.view.min_hier_levels-1, 0)
-                    iter.max_depth = max(self.view.max_hier_levels-1, 0)
-                    while not iter.at_end():
-                        sh = iter.shape()
-                        # # Hotspot, don't log this
-                        # if Debugging.DEBUG:
-                        #     debug(f"lyr {lyr} ({li}), found {sh}")
-                        pg = sh.polygon
-                        if pg is None:
-                            # # Hotspot, don't log this
-                            # if Debugging.DEBUG:
-                            #     debug(f"Skip shape {sh}, it's has no polygon")
-                            pass
-                        else:
-                            p = sh.polygon.transformed(iter.itrans())
-                            for e in p.each_edge():
-                                consider_edge_selection(
-                                    AlignToolSelection(location=location,
-                                                       search_box=search_box,
-                                                       edge=e,
-                                                       path=iter.path(),
-                                                       shape=sh,
-                                                       bbox_of_instance=None,
-                                                       layer=lyr,
-                                                       snap_point=None)  # NOTE: snap point will be set later
-                                )
-                            midpoint = p.bbox().center()
-                            midpoint_dummy_edge = pya.Edge(midpoint, midpoint)
-                            consider_edge_selection(
-                                AlignToolSelection(location=location,
-                                                   search_box=search_box,
-                                                   edge=midpoint_dummy_edge,
-                                                   path=iter.path(),
-                                                   shape=sh,
-                                                   bbox_of_instance=None,
-                                                   layer=None,
-                                                   snap_point=midpoint)
-                            )
-                        
-                        iter.next()
 
-            if consider_rulers:
-                for a in self.view.each_annotation():
-                    points: List[pya.Point] = []
-                    edges: List[pya.Edge] = []
-                    match a.outline:
-                        case pya.Annotation.OutlineBox:
-                            box = a.box().to_itype(self.dbu)
-                            edges = pya.Polygon(box).each_edge()
-                        case _:
-                            points = [dp.to_itype(self.dbu) for dp in a.points]
-                    for e in edges:
-                        clipped_edge = e.clipped(search_box)
-                        if clipped_edge:
-                            consider_edge_selection(
-                                AlignToolSelection(location=location,
-                                                   search_box=search_box,
-                                                   edge=e,
-                                                   path=[],
-                                                   shape=None,
-                                                   bbox_of_instance=None,
-                                                   layer=None,
-                                                   snap_point=None)  # NOTE: snap point will be set later
-                            )
-                    for p in points:
-                        if search_box.contains(p):
-                            e = pya.Edge(p, p)
-                            consider_edge_selection(
-                                AlignToolSelection(location=location,
-                                                   search_box=search_box,
-                                                   edge=e,
-                                                   path=[],
-                                                   shape=None,
-                                                   bbox_of_instance=None,
-                                                   layer=None,
-                                                   snap_point=p)
-                            )
+        if consider_rulers:
+            for a in self.view.each_annotation():
+                points: List[pya.Point] = []
+                edges: List[pya.Edge] = []
+                match a.outline:
+                    case pya.Annotation.OutlineBox:
+                        box = a.box().to_itype(self.dbu)
+                        edges = pya.Polygon(box).each_edge()
+                    case _:
+                        points = [dp.to_itype(self.dbu) for dp in a.points]
+                for e in edges:
+                    clipped_edge = e.clipped(search_box)
+                    if clipped_edge:
+                        consider_edge_selection(
+                            AlignToolSelection(location=location,
+                                               search_box=search_box,
+                                               edge=e,
+                                               path=[],
+                                               shape=None,
+                                               bbox_of_instance=None,
+                                               layer=None,
+                                               snap_point=None)  # NOTE: snap point will be set later
+                        )
+                for p in points:
+                    if search_box.contains(p):
+                        e = pya.Edge(p, p)
+                        consider_edge_selection(
+                            AlignToolSelection(location=location,
+                                               search_box=search_box,
+                                               edge=e,
+                                               path=[],
+                                               shape=None,
+                                               bbox_of_instance=None,
+                                               layer=None,
+                                               snap_point=p)
+                        )
 
         if nearest.edge is None:
             return None
