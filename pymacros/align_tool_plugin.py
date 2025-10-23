@@ -377,12 +377,15 @@ class AlignToolPlugin(pya.Plugin):
         if self.cell_view.is_cell_hidden(top_cell):
             return None
         
+        iteration_limit = 1000
+        
         # we prioritize the child instances of top cell
         # for those we also consider the bounding box
         if self.view.max_hier_levels >= 1:
             iter = top_cell.begin_instances_rec_overlapping(search_box)
             iter.min_depth = max(self.view.min_hier_levels-1, 0)
             iter.max_depth = max(self.view.max_hier_levels-1, 0)
+            i = 0
             while not iter.at_end():
                 inst = iter.current_inst_element().inst()
                 hidden = self.view.is_cell_hidden(inst.cell.cell_index(), self.view.active_cellview_index)
@@ -419,6 +422,9 @@ class AlignToolPlugin(pya.Plugin):
                                            snap_point=midpoint)
                     )
                 iter.next()
+                i += 1
+                if i >= iteration_limit:
+                    break
         
         # for lyr, li in enumerate(self.layout.layer_infos()):
         ## NOTE: GUI levels 0 .. 0 means that only the TOP cell(s) are viewed from outside!
@@ -427,6 +433,7 @@ class AlignToolPlugin(pya.Plugin):
                 iter = top_cell.begin_shapes_rec_overlapping(lyr, search_box)
                 iter.min_depth = max(self.view.min_hier_levels-1, 0)
                 iter.max_depth = max(self.view.max_hier_levels-1, 0)
+                i = 0
                 while not iter.at_end():
                     sh = iter.shape()
                     # # Hotspot, don't log this
@@ -465,6 +472,9 @@ class AlignToolPlugin(pya.Plugin):
                         )
                     
                     iter.next()
+                    i += 1
+                    if i >= iteration_limit:
+                        break
 
         if consider_rulers:
             for a in self.view.each_annotation():
