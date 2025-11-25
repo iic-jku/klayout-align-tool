@@ -53,12 +53,14 @@ import klayout_plugin_utils.editor_options
 import klayout_plugin_utils.event_loop
 import klayout_plugin_utils.object_description
 import klayout_plugin_utils.str_enum_compat
+import klayout_plugin_utils.tech_helpers
 import align_tool_plugin
 reload(klayout_plugin_utils.debugging)
 reload(klayout_plugin_utils.editor_options)
 reload(klayout_plugin_utils.event_loop)
 reload(klayout_plugin_utils.object_description)
 reload(klayout_plugin_utils.str_enum_compat)
+reload(klayout_plugin_utils.tech_helpers)
 reload(align_tool_plugin)
 
 import klayout_plugin_utils.debugging

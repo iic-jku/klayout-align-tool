@@ -27,6 +27,7 @@ import pya
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.str_enum_compat import StrEnum
+from klayout_plugin_utils.tech_helpers import drc_tech_grid_um
 
 
 class AlignToolState(StrEnum):
@@ -704,10 +705,16 @@ class AlignToolPlugin(pya.Plugin):
                                         "Aligning non-parallel edges is not yet supported.")
                 self.deactivate()
                 return
+
+
+        # snap to technical minimum grid (avoid DRC offgrid errors)
+        grid_dbu = int(drc_tech_grid_um() / self.dbu)        
+        snapped_dx = round(dx / grid_dbu) * grid_dbu
+        snapped_dy = round(dy / grid_dbu) * grid_dbu
         
         self.view.transaction("align")
         try:
-            trans = pya.Trans(dx, dy)
+            trans = pya.Trans(snapped_dx, snapped_dy)
             for t in transformees:
                 t.transform(trans)
         finally:
