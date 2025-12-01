@@ -164,7 +164,9 @@ class AlignToolPlugin(pya.Plugin):
         self._selection1: Optional[AlignToolSelection] = None
         self.markers_selection1 = []
         self.markers_selection2 = []
-        self.toolTip = pya.QToolTip()       
+        self.preview_selection1: Optional[AlignToolSelection] = None
+        self.preview_selection2: Optional[AlignToolSelection] = None
+        self.toolTip = pya.QToolTip()
 
     @property
     def cell_view(self) -> pya.CellView:
@@ -291,12 +293,14 @@ class AlignToolPlugin(pya.Plugin):
         for marker in self.markers_selection1:
             marker._destroy()
         self.markers_selection1 = []
-    
+        self.preview_selection1 = None
+
     def _clear_markers_selection2(self):
         for marker in self.markers_selection2:
             marker._destroy()
         self.markers_selection2 = []
-    
+        self.preview_selection2 = None
+
     def find_nearest_edge_point(self, location: pya.Point, edge: pya.Edge) -> pya.Point:
         """
         On the chosen edge, we want to find nearest end point or the center point
@@ -593,10 +597,12 @@ class AlignToolPlugin(pya.Plugin):
                 case AlignToolState.PENDING_SELECTION1:
                     self._clear_markers_selection1()
                     self.markers_selection1 = self.preview_markers_for_selection(selection)
+                    self.preview_selection1 = selection
 
                 case AlignToolState.PENDING_SELECTION2:
                     self._clear_markers_selection2()
                     self.markers_selection2 = self.preview_markers_for_selection(selection)
+                    self.preview_selection2 = selection
 
             return True           
         return False
@@ -604,27 +610,23 @@ class AlignToolPlugin(pya.Plugin):
     def mouse_click_event(self, dpoint: pya.DPoint, buttons: int, prio: bool):
         if prio:
             if buttons in [8]:  # Left click
-                # only consider rulers to specify a destination
-                consider_rulers = self.state == AlignToolState.PENDING_SELECTION2
-                
-                selection = self.find_selection(location=dpoint, 
-                                                max_distance=self.max_distance,
-                                                consider_rulers=consider_rulers)
-                if selection is None:
-                    return False
-                    
                 match self.state:
                     case AlignToolState.INACTIVE:
                         return False
                      
                     case AlignToolState.PENDING_SELECTION1:
-                        self.selection1 = selection
+                        if self.preview_selection1 is None:
+                            return False
+                        self.selection1 = self.preview_selection1
                         self.state = AlignToolState.PENDING_SELECTION2
                         
                     case AlignToolState.PENDING_SELECTION2:
-                        selection1 = self.selection1
-                        selection2 = selection
+                        if self.preview_selection2 is None:
+                            return False
                     
+                        selection1 = self.selection1
+                        selection2 = self.preview_selection2
+                        
                         self.state = AlignToolState.INACTIVE
                         self.selection1 = None
                         
