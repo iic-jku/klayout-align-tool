@@ -383,12 +383,14 @@ class AlignToolPlugin(pya.Plugin):
             return None
         
         iteration_limit = 1000
-        
-        # we prioritize the child instances of top cell
-        # for those we also consider the bounding box
+
+        #
+        # consider bounding box and center for instances where only the cell frame is visible
+        # do not consider visible instances (where the cell frame is also not displayed)
+        #
         if self.view.max_hier_levels >= 1:
             iter = top_cell.begin_instances_rec_overlapping(search_box)
-            iter.min_depth = max(self.view.min_hier_levels-1, 0)
+            iter.min_depth = max(self.view.max_hier_levels-1, 0)
             iter.max_depth = max(self.view.max_hier_levels-1, 0)
             i = 0
             while not iter.at_end():
