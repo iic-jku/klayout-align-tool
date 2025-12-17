@@ -3,7 +3,7 @@
  <name>AlignToolPlugin</name>
  <token/>
  <hidden>false</hidden>
- <version>0.21</version>
+ <version>0.22</version>
  <api-version/>
  <title>Align Tool Plugin</title>
  <doc>Tool to align layout objects</doc>
