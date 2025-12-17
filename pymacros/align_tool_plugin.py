@@ -228,12 +228,22 @@ class AlignToolPlugin(pya.Plugin):
         return True  # DEBUG
 
     def selected_objects(self) -> List:
+        """
+        It's forbidden to move shapes within subcells in case they are pre-selected,
+        as only moving the whole instance is allowed, to ensure cells are not broken.
+        
+        Shapes directly under the top-level are fine.
+        """
         l = []
         for o in self.view.each_object_selected():
             if o.is_cell_inst():
                 l += [o.inst()]
             elif o.shape is not None:
-                l += [o.shape]
+                if len(o.path) == 0:
+                    l += [o.shape]
+                else:
+                    pass
+                    l += [o.path[-1].inst()]
         return l
         
     def show_editor_options(self):
