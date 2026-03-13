@@ -33,9 +33,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #--------------------------------------------------------------------------------
 
-import os 
 import sys
 
+import pya
+if not pya.Application.instance().is_editable():  # non-GUI mode
+    sys.exit(0)
+
+import os 
+    
 directory_containing_this_script = os.path.realpath(os.path.dirname(__file__))
 for name in (
     'KLayoutPluginUtils',   # deployed via Salt
