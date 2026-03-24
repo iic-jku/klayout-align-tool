@@ -68,7 +68,7 @@ class AlignToolSetupDock(pya.QDockWidget):
     def updateState(self, state: AlignToolState):
         self.setupWidget.updateState(state)
 
-    def updatePreSelection(self, pre_selection: List[pya.Instance | pya.Shape]):
+    def updatePreSelection(self, pre_selection: List[Union[pya.Instance, pya.Shape]]):
         self.setupWidget.updatePreSelection(pre_selection)
         
     def updateSelection1(self, selection: AlignToolSelection):
@@ -120,7 +120,7 @@ class AlignToolSetupWidget(pya.QWidget):
                 '<span style="font-weight:bold; color:blue;">Next</span>'
             )
 
-    def updatePreSelection(self, pre_selection: List[pya.Instance | pya.Shape]):
+    def updatePreSelection(self, pre_selection: List[Union[pya.Instance, pya.Shape]]):
         if len(pre_selection) == 0:
             msg = '<span style="text-decoration: underline;">Pre-selection:</span> None'
         else:
@@ -198,11 +198,11 @@ class AlignToolPlugin(pya.Plugin):
             self.setupDock.updateState(state)
 
     @property
-    def pre_selected_objects(self) -> List[pya.Instance | pya.Shape]:
+    def pre_selected_objects(self) -> List[Union[pya.Instance, pya.Shape]]:
         return self._pre_selected_objects
 
     @pre_selected_objects.setter
-    def pre_selected_objects(self, objects: List[pya.Instance | pya.Shape]):
+    def pre_selected_objects(self, objects: List[Union[pya.Instance, pya.Shape]]):
         if Debugging.DEBUG:
             debug(f"Setting pre_selected_objects ({len(self.pre_selected_objects)}): {self.pre_selected_objects}")
         
