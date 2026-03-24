@@ -17,6 +17,8 @@
 #--------------------------------------------------------------------------------
 
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 import os 
 import sys
@@ -102,22 +104,21 @@ class AlignToolSetupWidget(pya.QWidget):
     
     def updateState(self, state: AlignToolState):
         msg: str = ""
-        match state:
-            case AlignToolState.INACTIVE:
-                self.selection1_status_label.setText("")
-                self.selection2_status_label.setText("")
-            case AlignToolState.PENDING_SELECTION1:
-                self.selection1_status_label.setText(
-                    '<span style="color:blue; font-weight:bold;">⬅</span> '
-                    '<span style="font-weight:bold; color:blue;">Next</span>'
-                )
-                self.selection2_status_label.setText("")
-            case AlignToolState.PENDING_SELECTION2:
-                self.selection1_status_label.setText("✅")
-                self.selection2_status_label.setText(
-                    '<span style="color:blue; font-weight:bold;">⬅</span> '
-                    '<span style="font-weight:bold; color:blue;">Next</span>'
-                )
+        if state == AlignToolState.INACTIVE:
+            self.selection1_status_label.setText("")
+            self.selection2_status_label.setText("")
+        elif state == AlignToolState.PENDING_SELECTION1:
+            self.selection1_status_label.setText(
+                '<span style="color:blue; font-weight:bold;">⬅</span> '
+                '<span style="font-weight:bold; color:blue;">Next</span>'
+            )
+            self.selection2_status_label.setText("")
+        elif state == AlignToolState.PENDING_SELECTION2:
+            self.selection1_status_label.setText("✅")
+            self.selection2_status_label.setText(
+                '<span style="color:blue; font-weight:bold;">⬅</span> '
+                '<span style="font-weight:bold; color:blue;">Next</span>'
+            )
 
     def updatePreSelection(self, pre_selection: List[pya.Instance | pya.Shape]):
         if len(pre_selection) == 0:
@@ -125,10 +126,12 @@ class AlignToolSetupWidget(pya.QWidget):
         else:
             def format_len(l: List, singular: str) -> Optional[str]:
                 n = len(l)
-                match n:
-                    case 0: return None
-                    case 1: return f"1 {singular}"
-                    case _: return f"{n} {singular}s"
+                if n == 0:
+                    return None
+                elif n == 1:
+                    return f"1 {singular}"
+                else:
+                    return f"{n} {singular}s"
             
             instances = [o for o in pre_selection if isinstance(o, pya.Instance)]
             shapes = [o for o in pre_selection if isinstance(o, pya.Shape)]
@@ -497,12 +500,11 @@ class AlignToolPlugin(pya.Plugin):
             for a in self.view.each_annotation():
                 points: List[pya.Point] = []
                 edges: List[pya.Edge] = []
-                match a.outline:
-                    case pya.Annotation.OutlineBox:
-                        box = a.box().to_itype(self.dbu)
-                        edges = pya.Polygon(box).each_edge()
-                    case _:
-                        points = [dp.to_itype(self.dbu) for dp in a.points]
+                if a.outline == pya.Annotation.OutlineBox:
+                    box = a.box().to_itype(self.dbu)
+                    edges = pya.Polygon(box).each_edge()
+                else:
+                    points = [dp.to_itype(self.dbu) for dp in a.points]
                 for e in edges:
                     clipped_edge = e.clipped(search_box)
                     if clipped_edge:
@@ -593,28 +595,26 @@ class AlignToolPlugin(pya.Plugin):
                                             max_distance=self.max_distance,
                                             consider_rulers=consider_rulers)
             if selection is None:
-                match self.state:
-                    case AlignToolState.INACTIVE:
-                        return False
-                    case AlignToolState.PENDING_SELECTION1:
-                        self.toolTip.showText(pya.QCursor.pos, "Select shape feature to align") 
-                    case AlignToolState.PENDING_SELECTION2:
-                        self.toolTip.showText(pya.QCursor.pos, "Select shape feature to reference") 
+                if self.state == AlignToolState.INACTIVE:
+                    return False
+                elif self.state == AlignToolState.PENDING_SELECTION1:
+                    self.toolTip.showText(pya.QCursor.pos, "Select shape feature to align") 
+                elif self.state == AlignToolState.PENDING_SELECTION2:
+                    self.toolTip.showText(pya.QCursor.pos, "Select shape feature to reference") 
                 return False  
             
-            match self.state:
-                case AlignToolState.INACTIVE:
-                    return False
-                 
-                case AlignToolState.PENDING_SELECTION1:
-                    self._clear_markers_selection1()
-                    self.markers_selection1 = self.preview_markers_for_selection(selection)
-                    self.preview_selection1 = selection
+            if self.state == AlignToolState.INACTIVE:
+                return False
+             
+            elif self.state == AlignToolState.PENDING_SELECTION1:
+                self._clear_markers_selection1()
+                self.markers_selection1 = self.preview_markers_for_selection(selection)
+                self.preview_selection1 = selection
 
-                case AlignToolState.PENDING_SELECTION2:
-                    self._clear_markers_selection2()
-                    self.markers_selection2 = self.preview_markers_for_selection(selection)
-                    self.preview_selection2 = selection
+            elif self.state == AlignToolState.PENDING_SELECTION2:
+                self._clear_markers_selection2()
+                self.markers_selection2 = self.preview_markers_for_selection(selection)
+                self.preview_selection2 = selection
 
             return True           
         return False
@@ -622,27 +622,26 @@ class AlignToolPlugin(pya.Plugin):
     def mouse_click_event(self, dpoint: pya.DPoint, buttons: int, prio: bool):
         if prio:
             if buttons in [8]:  # Left click
-                match self.state:
-                    case AlignToolState.INACTIVE:
-                        return False
+                if self.state == AlignToolState.INACTIVE:
+                    return False
                      
-                    case AlignToolState.PENDING_SELECTION1:
-                        if self.preview_selection1 is None:
-                            return False
-                        self.selection1 = self.preview_selection1
-                        self.state = AlignToolState.PENDING_SELECTION2
-                        
-                    case AlignToolState.PENDING_SELECTION2:
-                        if self.preview_selection2 is None:
-                            return False
+                elif self.state == AlignToolState.PENDING_SELECTION1:
+                    if self.preview_selection1 is None:
+                        return False
+                    self.selection1 = self.preview_selection1
+                    self.state = AlignToolState.PENDING_SELECTION2
                     
-                        selection1 = self.selection1
-                        selection2 = self.preview_selection2
-                        
-                        self.state = AlignToolState.INACTIVE
-                        self.selection1 = None
-                        
-                        self.commit_align(selection1, selection2)
+                elif self.state == AlignToolState.PENDING_SELECTION2:
+                    if self.preview_selection2 is None:
+                        return False
+                
+                    selection1 = self.selection1
+                    selection2 = self.preview_selection2
+                    
+                    self.state = AlignToolState.INACTIVE
+                    self.selection1 = None
+                    
+                    self.commit_align(selection1, selection2)
                 
             if buttons in [16, 32]:
                 self._clear_all_markers()
