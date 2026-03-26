@@ -103,7 +103,6 @@ class AlignToolSetupWidget(pya.QWidget):
         event.accept()
     
     def updateState(self, state: AlignToolState):
-        msg: str = ""
         if state == AlignToolState.INACTIVE:
             self.selection1_status_label.setText("")
             self.selection2_status_label.setText("")
@@ -119,6 +118,8 @@ class AlignToolSetupWidget(pya.QWidget):
                 '<span style="color:blue; font-weight:bold;">⬅</span> '
                 '<span style="font-weight:bold; color:blue;">Next</span>'
             )
+        else:
+            raise NotImplementedError(f"AlignToolState.matches: unknown type {state}")
 
     def updatePreSelection(self, pre_selection: List[Union[pya.Instance, pya.Shape]]):
         if len(pre_selection) == 0:
@@ -601,22 +602,25 @@ class AlignToolPlugin(pya.Plugin):
                     self.toolTip.showText(pya.QCursor.pos, "Select shape feature to align") 
                 elif self.state == AlignToolState.PENDING_SELECTION2:
                     self.toolTip.showText(pya.QCursor.pos, "Select shape feature to reference") 
-                return False  
+                else:
+                    raise NotImplementedError(f"AlignToolState.matches: unknown type {self.state}")
+
+                return False
             
             if self.state == AlignToolState.INACTIVE:
                 return False
-             
             elif self.state == AlignToolState.PENDING_SELECTION1:
                 self._clear_markers_selection1()
                 self.markers_selection1 = self.preview_markers_for_selection(selection)
                 self.preview_selection1 = selection
-
             elif self.state == AlignToolState.PENDING_SELECTION2:
                 self._clear_markers_selection2()
                 self.markers_selection2 = self.preview_markers_for_selection(selection)
                 self.preview_selection2 = selection
-
-            return True           
+            else:
+                raise NotImplementedError(f"AlignToolState.matches: unknown type {self.state}")
+            
+            return True
         return False
         
     def mouse_click_event(self, dpoint: pya.DPoint, buttons: int, prio: bool):
