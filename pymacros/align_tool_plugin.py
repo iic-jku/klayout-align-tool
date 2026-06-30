@@ -250,14 +250,6 @@ class AlignToolPlugin(pya.Plugin):
                     l += [o.path[-1].inst()]
         return l
         
-    def show_editor_options(self):
-        mw = pya.Application.instance().main_window()
-    
-        # NOTE: if we directly call the Editor Options menu action
-        #       the GUI immediately will switch back to the Librariew view
-        #       so we enqueue it into the event loop
-        EventLoop.defer(lambda w=mw: w.call_menu('cm_edit_options'))
-               
     def activated(self):
         view_is_visible = self.view.widget().isVisible()
         if Debugging.DEBUG:
@@ -273,8 +265,6 @@ class AlignToolPlugin(pya.Plugin):
             self.setupDock = AlignToolSetupDock()
             mw.addDockWidget(pya.Qt_DockWidgetArea.RightDockWidgetArea, self.setupDock)
         self.setupDock.show()
-
-        self.show_editor_options()
 
         self.pre_selected_objects = self.selected_objects()
         
